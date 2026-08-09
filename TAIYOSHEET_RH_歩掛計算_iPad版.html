@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="歩掛計算RH">
+<meta name="theme-color" content="#1F3864">
+<title>TAIYOSHEET_RH 歩掛計算(iPad版)</title>
+<style>
+  :root{
+    --navy:#1F3864; --head:#2E5C9A; --band:#F2F5FA; --inp:#FFF7C2;
+    --calc:#DCE6F1; --red:#C00000; --line:#B9C4D6; --ink:#1A2333; --sub:#5A6678;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    font-family:'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic UI','Yu Gothic',Meiryo,sans-serif;
+    background:#EDF0F4; color:var(--ink); line-height:1.55;
+    padding:max(16px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .container{max-width:1060px;margin:0 auto;}
+  b{font-weight:700;}
+
+  /* ---- 表題欄(図面風) ---- */
+  .titlebox{background:#fff;border:2px solid var(--navy);}
+  .title-row{display:flex;flex-wrap:wrap;align-items:stretch;}
+  .title-main{flex:1;min-width:240px;padding:12px 16px;}
+  .title-eyebrow{font-size:10.5px;letter-spacing:.18em;color:var(--sub);font-weight:700;}
+  .title-main h1{margin-top:2px;font-size:22px;font-weight:900;color:var(--navy);letter-spacing:.04em;}
+  .title-meta{border-left:1px solid var(--line);min-width:210px;}
+  .title-meta .mrow{display:flex;border-bottom:1px solid var(--line);font-size:10px;}
+  .title-meta .mrow .k{background:var(--band);width:58px;padding:4px 8px;font-weight:700;border-right:1px solid var(--line);}
+  .title-meta .mrow .v{padding:4px 8px;flex:1;color:var(--sub);}
+  .stamp-wrap{display:flex;align-items:center;padding:0 16px;border-left:1px solid var(--line);}
+  .stamp{
+    text-align:center;padding:8px 12px;font-weight:800;font-size:12px;line-height:1.35;min-width:96px;
+    border:2.5px solid var(--line);outline:1px solid var(--line);outline-offset:2px;color:var(--sub);
+  }
+  .stamp.ok{border-color:var(--navy);outline-color:var(--navy);color:var(--navy);}
+  .stamp.ng{border-color:var(--red);outline-color:var(--red);color:var(--red);}
+  .principle{
+    display:flex;flex-wrap:wrap;gap:4px 20px;padding:6px 16px;background:var(--navy);color:#fff;font-size:11px;
+  }
+  @media(max-width:640px){.title-meta{display:none;}}
+
+  .warn{
+    margin-top:8px;padding:8px 12px;font-weight:700;font-size:12px;
+    background:#FDECEA;border:1px solid var(--red);color:var(--red);
+  }
+
+  /* ---- 2カラムレイアウト ---- */
+  .layout{margin-top:12px;display:flex;gap:12px;align-items:flex-start;}
+  .col-input{width:300px;flex-shrink:0;display:grid;gap:12px;}
+  .col-result{flex:1;min-width:0;display:grid;gap:12px;}
+  @media(max-width:860px){
+    .layout{flex-direction:column;}
+    .col-input{width:100%;}
+  }
+
+  .card{background:#fff;border:1px solid var(--line);}
+  .secbar{background:var(--navy);color:#fff;font-weight:700;letter-spacing:.05em;font-size:13px;padding:7px 12px;}
+  .card-body{padding:12px;display:grid;gap:12px;}
+
+  /* ---- 入力部品(iPad: 16px以上でズーム防止・44pt級タップ領域) ---- */
+  .fld-label{display:block;font-size:12px;font-weight:700;color:var(--ink);}
+  .fld-row{display:flex;align-items:center;gap:6px;margin-top:4px;}
+  .fld-row input[type=text]{
+    width:120px;padding:10px 10px;border:1px solid #C9B458;background:var(--inp);
+    border-radius:3px;text-align:right;font-size:16px;font-weight:700;color:#1743B3;
+    font-variant-numeric:tabular-nums;min-height:44px;
+  }
+  .fld-row input[type=text]:disabled{border-color:var(--line);background:#EEF0F3;color:var(--sub);}
+  .fld-row input:focus{outline:2px solid #5B8DEF;outline-offset:1px;}
+  .fld-unit{font-size:12px;color:var(--sub);}
+  .fld-hint{display:block;margin-top:3px;font-size:10.5px;color:var(--sub);}
+  .fld-sm input[type=text]{width:96px;}
+
+  .radio-row{display:flex;gap:18px;font-size:12.5px;font-weight:700;}
+  label.tap{display:flex;align-items:center;gap:6px;cursor:pointer;min-height:32px;}
+  label.tap-start{display:flex;align-items:flex-start;gap:6px;cursor:pointer;padding:4px 0;}
+  input[type=checkbox],input[type=radio]{width:20px;height:20px;flex-shrink:0;accent-color:var(--head);}
+  label.tap-start input{margin-top:1px;}
+
+  .conv-box{
+    margin-top:6px;padding:8px 10px;display:flex;justify-content:space-between;align-items:baseline;
+    background:var(--calc);border:1px solid var(--line);font-size:12px;
+  }
+  .conv-box .v{font-weight:800;font-size:17px;color:var(--navy);}
+  .conv-box .v small{font-size:10px;font-weight:400;}
+
+  .prem-label{font-size:11.5px;}
+  .prem-label.ng{color:var(--red);font-weight:700;}
+
+  .toggle-head{width:100%;text-align:left;border:none;background:none;cursor:pointer;padding:0;display:block;}
+  .toggle-head:focus-visible{outline:2px solid #5B8DEF;}
+
+  .price-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .price-note{grid-column:span 2;font-size:10px;color:var(--sub);}
+
+  .btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;}
+  button.btn{
+    padding:12px 10px;font-size:13px;font-weight:700;cursor:pointer;min-height:46px;
+    background:#fff;color:var(--head);border:1px solid var(--head);border-radius:3px;
+  }
+  button.btn.primary{background:var(--head);color:#fff;border-color:var(--navy);}
+  button.btn:active{opacity:.75;}
+  button.btn:focus-visible{outline:2px solid #5B8DEF;outline-offset:1px;}
+  .msg{padding:0 12px 10px;font-size:11px;color:var(--sub);}
+
+  /* ---- 結果:統計カード ---- */
+  .stats{display:flex;flex-wrap:wrap;gap:8px;}
+  .stat{
+    flex:1;min-width:140px;padding:8px 12px;border-radius:3px;
+    background:var(--calc);border:1px solid var(--line);
+  }
+  .stat.alert{background:#FBE9E7;border-color:var(--red);}
+  .stat .s-label{font-size:10.5px;color:var(--sub);font-weight:700;}
+  .stat .s-val{font-size:24px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;}
+  .stat.alert .s-val{color:var(--red);}
+  .stat .s-unit{font-size:11px;color:var(--sub);margin-left:3px;}
+  .stat .s-sub{font-size:10px;color:var(--sub);}
+
+  /* ---- 結果:テーブル ---- */
+  .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{border-collapse:collapse;width:100%;}
+  th{
+    background:var(--head);color:#fff;font-size:11px;font-weight:700;
+    padding:7px 8px;text-align:left;white-space:nowrap;border:1px solid var(--line);
+  }
+  th.r{text-align:right;}
+  td{
+    padding:7px 8px;border:1px solid var(--line);font-size:12px;vertical-align:middle;
+    font-variant-numeric:tabular-nums;background:#fff;
+  }
+  td.r{text-align:right;}
+  td.band{background:var(--band);}
+  td.calc{background:var(--calc);}
+  td.bold{font-weight:700;}
+  td.note{font-size:10.5px;color:var(--sub);}
+  .cell-sub{font-size:9.5px;color:var(--sub);}
+  .tbl-foot{padding:6px 10px;text-align:right;font-size:11.5px;border-top:1px solid var(--line);}
+  .tbl-foot .total{color:var(--navy);font-size:13px;}
+  .tbl-foot .taxnote{font-size:9.5px;color:var(--sub);}
+  .proc-btn{
+    margin:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;
+    color:var(--head);border:1px solid var(--line);background:var(--band);border-radius:3px;min-height:36px;
+  }
+  .proc-wrap{padding:0 8px 8px;}
+  .elec-card{border:1px dashed var(--head);background:#fff;}
+  .elec-foot{
+    display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;
+    padding:6px 10px;font-size:11.5px;border-top:1px solid var(--line);
+  }
+  .caution{
+    padding:8px 12px;background:#fff;border:1px solid var(--line);
+    font-size:10.5px;color:var(--red);line-height:1.8;
+  }
+
+  @media print{
+    body{background:#fff;padding:0;}
+    .col-input,.proc-btn,.warn{display:none !important;}
+    .layout{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ================= 表題欄 ================= -->
+  <div class="titlebox">
+    <div class="title-row">
+      <div class="title-main">
+        <div class="title-eyebrow">電気式ロードヒーティング設置工(切削溝方式・ドライカット)</div>
+        <h1>TAIYOSHEET_RH 歩掛計算</h1>
+      </div>
+      <div class="title-meta" id="metaBox"></div>
+      <div class="stamp-wrap">
+        <div class="stamp" id="stamp">数量<br>未入力</div>
+      </div>
+    </div>
+    <div class="principle" id="principleBar"></div>
+  </div>
+
+  <div id="warnBox"></div>
+
+  <div class="layout">
+    <!-- ================= 左:入力 ================= -->
+    <div class="col-input">
+
+      <div class="card">
+        <div class="secbar">施工数量の入力</div>
+        <div class="card-body">
+          <div class="radio-row">
+            <label class="tap"><input type="radio" name="lenMode" id="modeBars" checked>本数で入力</label>
+            <label class="tap"><input type="radio" name="lenMode" id="modeLen">延長で入力</label>
+          </div>
+          <div id="barsBlock">
+            <span class="fld-label">施工本数(TAIYOSHEET_RH)</span>
+            <span class="fld-row"><input type="text" inputmode="decimal" id="bars" value="24"><span class="fld-unit">本</span></span>
+            <span class="fld-hint" id="barsHint"></span>
+          </div>
+          <div id="lenBlock" style="display:none;">
+            <span class="fld-label">施工延長</span>
+            <span class="fld-row"><input type="text" inputmode="decimal" id="extIn" value="1200"><span class="fld-unit">m</span></span>
+            <span class="fld-hint">50mで切上げて本数に換算</span>
+            <div class="conv-box">
+              <span style="font-weight:700;">→ 施工本数(切上げ)</span>
+              <span class="v" id="convVal">24 <small>本(1200m)</small></span>
+            </div>
+          </div>
+          <div>
+            <span class="fld-label">結線箇所数</span>
+            <span class="fld-row"><input type="text" inputmode="decimal" id="kessenMan" value="48" disabled><span class="fld-unit">箇所</span></span>
+            <label class="tap" style="margin-top:4px;font-size:11px;color:var(--sub);">
+              <input type="checkbox" id="kessenAuto" checked>標準(2箇所/本)で自動計算
+            </label>
+          </div>
+          <div>
+            <span class="fld-label">制御盤・キュービクル</span>
+            <span class="fld-row"><input type="text" inputmode="decimal" id="banCnt" value="1"><span class="fld-unit">台</span></span>
+            <span class="fld-hint">据付・試運転・クレーンの算出に使用(電気工事・別途)</span>
+          </div>
+          <label class="tap" style="font-size:12.5px;font-weight:700;">
+            <input type="checkbox" id="showElec" checked>電気工事(別途計上分)も参考表示する
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="secbar">標準施工条件の確認</div>
+        <div class="card-body" style="gap:2px;" id="premBox"></div>
+      </div>
+
+      <div class="card">
+        <button class="toggle-head" id="priceToggle">
+          <div class="secbar">単価入力(任意・金額試算) <span id="priceArrow">▼</span></div>
+        </button>
+        <div class="card-body price-grid" id="priceBody" style="display:none;">
+          <div class="fld-sm"><span class="fld-label">世話役</span><span class="fld-row"><input type="text" inputmode="decimal" id="pSewa"><span class="fld-unit">円/人日</span></span></div>
+          <div class="fld-sm"><span class="fld-label">特殊作業員</span><span class="fld-row"><input type="text" inputmode="decimal" id="pToku"><span class="fld-unit">円/人日</span></span></div>
+          <div class="fld-sm"><span class="fld-label">普通作業員</span><span class="fld-row"><input type="text" inputmode="decimal" id="pFutu"><span class="fld-unit">円/人日</span></span></div>
+          <div class="fld-sm"><span class="fld-label">電工</span><span class="fld-row"><input type="text" inputmode="decimal" id="pDenko"><span class="fld-unit">円/人日</span></span></div>
+          <div class="fld-sm"><span class="fld-label">切削機損料</span><span class="fld-row"><input type="text" inputmode="decimal" id="pCut"><span class="fld-unit">円/h</span></span></div>
+          <div class="fld-sm"><span class="fld-label">注入機損料</span><span class="fld-row"><input type="text" inputmode="decimal" id="pInj"><span class="fld-unit">円/h</span></span></div>
+          <div class="fld-sm"><span class="fld-label">クレーン</span><span class="fld-row"><input type="text" inputmode="decimal" id="pCrane"><span class="fld-unit">円/h</span></span></div>
+          <div class="fld-sm"><span class="fld-label">諸雑費率</span><span class="fld-row"><input type="text" inputmode="decimal" id="pZatsu" style="width:70px;"><span class="fld-unit">%</span></span><span class="fld-hint">対 土木労務費</span></div>
+          <div class="price-note">当該年度の公共工事設計労務単価・機械損料を入力。入力した項目のみ金額表示(合計は労務3職種すべて入力時)。</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="secbar">充填材(任意)</div>
+        <div class="card-body price-grid">
+          <div class="fld-sm"><span class="fld-label">所要量</span><span class="fld-row"><input type="text" inputmode="decimal" id="fillPerM" style="width:80px;"><span class="fld-unit">/m</span></span><span class="fld-hint">kg/m 等</span></div>
+          <div class="fld-sm"><span class="fld-label">ロス率</span><span class="fld-row"><input type="text" inputmode="decimal" id="fillLoss" style="width:70px;"><span class="fld-unit">%</span></span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="btn-grid">
+          <button class="btn primary" id="csvBtn">CSV出力</button>
+          <button class="btn primary" id="printBtn">印刷 / PDF</button>
+          <button class="btn" id="saveBtn">入力を保存</button>
+          <button class="btn" id="resetBtn">初期値に戻す</button>
+        </div>
+        <div class="msg" id="msg" role="status"></div>
+      </div>
+    </div>
+
+    <!-- ================= 右:算出結果 ================= -->
+    <div class="col-result">
+      <div class="stats" id="statsBox"></div>
+
+      <div class="card">
+        <div class="secbar">1.労務(土木工事)</div>
+        <div class="tscroll"><table id="laborTable" style="min-width:480px;"></table></div>
+        <button class="proc-btn" id="procBtn">▼ 工程別内訳(7工程)を表示</button>
+        <div class="proc-wrap tscroll" id="procWrap" style="display:none;">
+          <table id="procTable" style="min-width:560px;"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="secbar">2.機械(編成台数・運転時間)</div>
+        <div class="tscroll"><table id="machTable"></table></div>
+      </div>
+
+      <div class="card">
+        <div class="secbar">3.材料</div>
+        <div class="tscroll"><table id="matTable"></table></div>
+        <div class="tbl-foot" id="matFoot" style="display:none;"></div>
+      </div>
+
+      <div class="card elec-card" id="elecCard">
+        <div class="secbar">4.電気工事(本歩掛の対象外・別途計上) ※参考</div>
+        <div class="tscroll"><table id="elecTable" style="min-width:520px;"></table></div>
+        <div class="elec-foot" id="elecFoot"></div>
+      </div>
+
+      <div class="caution">
+        ※本ツールの歩掛定数は提出用様式(第2版)の<b>記入例(仮値)</b>です。社内確定値への差し替え前の数量・金額は目安に過ぎません。<br>
+        ※金額は税抜・円未満四捨五入の概算です。所要夜数は原則(1本=1夜)による値で、資機材搬入日・完成検査日等は含みません。<br>
+        ※本歩掛は参考資料であり公的歩掛ではありません。交通誘導警備員・電気工事・高圧受電設備・現場管理費等の間接費は含みません(別途計上)。切削機・注入機のオペレータは特殊作業員に含めて計上しています。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   TAIYOSHEET_RH 設置工 歩掛計算 v2(参考歩掛 第2版準拠)iPad版
+   ★歩掛定数 RATE は提出用様式の「記入例(仮値)」。
+     社内確定値に差し替えて使用(このブロックのみ書換えで全反映)。
+   ===================================================================== */
+const VER = "第2版準拠 / app v2 (iPad)";
+const RATE = {
+  crew: { sewa: 1, toku: 3, futsu: 4 },
+  mPerNight: 50,
+  stdMin: 11,
+  stdMax: 30,
+  civil: [
+    { p: "準備・現場管理", s: 0.15, t: 0.3, f: 0.3, note: "施工計画・墨出し・搬入段取・機械据付" },
+    { p: "交通規制", s: 0.05, t: 0, f: 1.0, note: "保安施設の毎夜設置・撤去。交通誘導警備員は別途" },
+    { p: "路面切削(ドライカット)", s: 0.25, t: 1.2, f: 0.6, note: "切削機の運転は特殊作業員(専任オペ)" },
+    { p: "下地処理・清掃・乾燥確認", s: 0.1, t: 0.2, f: 0.6, note: "溝内清掃・乾燥確認" },
+    { p: "ヒーター敷設・固定", s: 0.25, t: 0.2, f: 0.8, note: "結線は電気工事(別途)" },
+    { p: "充填材注入・仕上げ", s: 0.15, t: 0.9, f: 0.4, note: "注入機の運転は特殊作業員" },
+    { p: "後片付け・清掃・撤収", s: 0.05, t: 0.2, f: 0.3, note: "規制撤去・機械搬出を含む" },
+  ],
+  mach: [
+    { m: "路面切削機(ドライカット式)", spec: "○○kW級", units: 1, h: 1.25, note: "★1台/班・専任オペは特殊作業員に含む" },
+    { m: "充填材注入機", spec: "○○L級", units: 1, h: 0.83, note: "100m当り1.67hの換算(四捨五入)" },
+    { m: "発電機", spec: "○○kVA", units: 1, h: null, note: "実測蓄積中につき別途" },
+  ],
+  elec: {
+    kessen: { unit: 10, s: 0.21, d: 0.83 },
+    ban: { s: 1.0, d: 2.0, f: 1.0 },
+    shiun: { s: 1.0, d: 2.0 },
+    craneH: 4.0,
+    kessenPerBar: 2,
+  },
+  premises: [
+    "夜間施工・車線規制である",
+    "切削溝設置方式(ドライカット)である",
+    "既設アスファルト舗装(健全部)である",
+    "平坦部・縦断勾配9%以下である",
+    "昼夜連続・全面通行止・トンネル内・橋面ではない",
+    "打換え同時施工・プレキャスト等ではない",
+  ],
+};
+const KEY = "taiyosheetRH:v2:ipad";
+const DEFAULTS = {
+  bars: "24", lenMode: false, extIn: "1200",
+  kessenAuto: true, kessenMan: "48", banCnt: "1",
+  showElec: true, prem: RATE.premises.map(() => true),
+  pSewa: "", pToku: "", pFutu: "", pDenko: "", pCut: "", pInj: "", pCrane: "", pZatsu: "",
+  fillPerM: "", fillLoss: "",
+};
+
+/* ---- 数値ユーティリティ(全角対応) ---- */
+const toNum = (v) => {
+  const s = String(v ?? "")
+    .replace(/[\uFF01-\uFF5E]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/[,\uFF0C\s]/g, "");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+};
+const f2 = (v) => v.toLocaleString("ja-JP",{minimumFractionDigits:2,maximumFractionDigits:2});
+const f1 = (v) => v.toLocaleString("ja-JP",{minimumFractionDigits:1,maximumFractionDigits:1});
+const f0 = (v) => Math.round(v).toLocaleString("ja-JP");
+const yen = (v) => "¥" + Math.round(v).toLocaleString("ja-JP");
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $ = (id) => document.getElementById(id);
+
+/* ---- 前提条件チェックボックスを生成 ---- */
+RATE.premises.forEach((p, i) => {
+  const lb = document.createElement("label");
+  lb.className = "tap-start prem-label";
+  lb.innerHTML = '<input type="checkbox" checked data-prem="' + i + '"><span>' + esc(p) + "</span>";
+  $("premBox").appendChild(lb);
+});
+const premHint = document.createElement("div");
+premHint.style.cssText = "font-size:10px;color:var(--sub);";
+premHint.textContent = "該当しない条件のチェックを外すと「適用外」として警告します。";
+$("premBox").appendChild(premHint);
+
+/* ---- 表題メタ ---- */
+const today = new Date().toLocaleDateString("ja-JP");
+$("metaBox").innerHTML = [
+  ["準拠様式", "参考歩掛 " + VER], ["NETIS", "HR-240016-A"],
+  ["作成", "㈱太陽 TAIYOSHEET計画推進部"], ["算出日", today],
+].map(([k,v]) => '<div class="mrow"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+'</div></div>').join("");
+
+/* ---- 状態の読み書き ---- */
+function getState() {
+  return {
+    bars: $("bars").value, lenMode: $("modeLen").checked, extIn: $("extIn").value,
+    kessenAuto: $("kessenAuto").checked, kessenMan: $("kessenMan").value, banCnt: $("banCnt").value,
+    showElec: $("showElec").checked,
+    prem: [...document.querySelectorAll("[data-prem]")].map(c => c.checked),
+    pSewa: $("pSewa").value, pToku: $("pToku").value, pFutu: $("pFutu").value, pDenko: $("pDenko").value,
+    pCut: $("pCut").value, pInj: $("pInj").value, pCrane: $("pCrane").value, pZatsu: $("pZatsu").value,
+    fillPerM: $("fillPerM").value, fillLoss: $("fillLoss").value,
+  };
+}
+function applyState(d) {
+  $("bars").value = d.bars; $("extIn").value = d.extIn;
+  $("modeLen").checked = !!d.lenMode; $("modeBars").checked = !d.lenMode;
+  $("kessenAuto").checked = !!d.kessenAuto; $("kessenMan").value = d.kessenMan;
+  $("banCnt").value = d.banCnt; $("showElec").checked = !!d.showElec;
+  const boxes = [...document.querySelectorAll("[data-prem]")];
+  const prem = Array.isArray(d.prem) && d.prem.length === boxes.length ? d.prem : DEFAULTS.prem;
+  boxes.forEach((c,i) => c.checked = !!prem[i]);
+  ["pSewa","pToku","pFutu","pDenko","pCut","pInj","pCrane","pZatsu","fillPerM","fillLoss"]
+    .forEach(k => $(k).value = d[k] ?? "");
+}
+
+let showProc = false;
+let calcCache = null; // CSV出力用
+
+/* =====================================================================
+   再計算 → 出力DOM更新
+   ===================================================================== */
+function recalc() {
+  const st = getState();
+
+  /* 入力ブロックの表示切替 */
+  $("barsBlock").style.display = st.lenMode ? "none" : "block";
+  $("lenBlock").style.display = st.lenMode ? "block" : "none";
+  $("kessenMan").disabled = st.kessenAuto;
+
+  /* ---- 数量の解決(本数⇄延長) ---- */
+  const n = st.lenMode
+    ? Math.max(0, Math.ceil(toNum(st.extIn) / RATE.mPerNight))
+    : Math.max(0, Math.floor(toNum(st.bars)));
+  const ext = n * RATE.mPerNight;
+  const kessen = st.kessenAuto ? n * RATE.elec.kessenPerBar : Math.max(0, Math.floor(toNum(st.kessenMan)));
+  const ban = Math.max(0, Math.floor(toNum(st.banCnt)));
+
+  $("barsHint").textContent = "施工延長 " + f0(ext) + " m(定尺 50m/本)・標準 " + RATE.stdMin + "〜" + RATE.stdMax + " 本";
+  $("convVal").innerHTML = f0(n) + ' <small>本(' + f0(ext) + 'm)</small>';
+  if (st.kessenAuto) $("kessenMan").value = String(n * RATE.elec.kessenPerBar);
+
+  /* ---- 土木 ---- */
+  const civRows = RATE.civil.map(r => ({ ...r, S: r.s*n, T: r.t*n, F: r.f*n }));
+  const sumS = civRows.reduce((a,r)=>a+r.S,0);
+  const sumT = civRows.reduce((a,r)=>a+r.T,0);
+  const sumF = civRows.reduce((a,r)=>a+r.F,0);
+  const civTotal = sumS + sumT + sumF;
+  const nights = n;
+  const machRows = RATE.mach.map(m => ({ ...m, H: m.h == null ? null : m.h*n }));
+  const machTotal = machRows.reduce((a,m)=>a+(m.H ?? 0),0);
+
+  /* ---- 材料 ---- */
+  const perM = toNum(st.fillPerM), loss = toNum(st.fillLoss);
+  const fillQty = perM > 0 ? ext * perM * (1 + loss/100) : null;
+
+  /* ---- 電気(別途) ---- */
+  const shiunQty = n > 0 ? 1 : 0;
+  const k10 = kessen / RATE.elec.kessen.unit;
+  const eKessen = { s: RATE.elec.kessen.s*k10, d: RATE.elec.kessen.d*k10 };
+  const eBan = { s: RATE.elec.ban.s*ban, d: RATE.elec.ban.d*ban, f: RATE.elec.ban.f*ban };
+  const eShiun = { s: RATE.elec.shiun.s*shiunQty, d: RATE.elec.shiun.d*shiunQty };
+  const eS = eKessen.s + eBan.s + eShiun.s;
+  const eD = eKessen.d + eBan.d + eShiun.d;
+  const eF = eBan.f;
+  const craneH = RATE.elec.craneH * ban;
+
+  /* ---- 金額 ---- */
+  const uS=toNum(st.pSewa), uT=toNum(st.pToku), uF=toNum(st.pFutu), uD=toNum(st.pDenko);
+  const uCut=toNum(st.pCut), uInj=toNum(st.pInj), uCr=toNum(st.pCrane), zat=toNum(st.pZatsu);
+  const anyLaborPrice = uS>0 || uT>0 || uF>0;
+  const civLaborOk = uS>0 && uT>0 && uF>0;
+  const civLaborCost = civLaborOk ? sumS*uS + sumT*uT + sumF*uF : null;
+  const machCost = (uCut>0 ? (machRows[0].H ?? 0)*uCut : 0) + (uInj>0 ? (machRows[1].H ?? 0)*uInj : 0);
+  const machCostShown = (uCut>0 || uInj>0) ? machCost : null;
+  const zatsuCost = civLaborCost != null && zat>0 ? civLaborCost*(zat/100) : null;
+  const civilCostTotal = civLaborCost != null ? civLaborCost + (machCostShown ?? 0) + (zatsuCost ?? 0) : null;
+  const elecLaborOk = uS>0 && uD>0 && (eF===0 || uF>0);
+  const elecCost = elecLaborOk ? eS*uS + eD*uD + eF*uF : null;
+  const craneCost = uCr>0 ? craneH*uCr : null;
+
+  /* ---- 適用範囲チェック ---- */
+  const inStd = n >= RATE.stdMin && n <= RATE.stdMax;
+  const premNG = RATE.premises.filter((_,i) => !st.prem[i]);
+  const ok = n>0 && inStd && premNG.length===0;
+  const warns = [];
+  if (n>0 && !inStd)
+    warns.push("適用外条件①:施工本数 "+n+" 本(標準 "+RATE.stdMin+"〜"+RATE.stdMax+" 本)→ 段取り比率・連続施工効果により歩掛が変動するため別途見積。");
+  if (premNG.length>0)
+    warns.push("標準施工条件を満たしません("+premNG.join("/")+")→ 適用外条件に該当。別途見積。");
+  const crewTotal = RATE.crew.sewa + RATE.crew.toku + RATE.crew.futsu;
+
+  /* ================= DOM更新 ================= */
+  const stamp = $("stamp");
+  stamp.className = "stamp " + (n===0 ? "" : ok ? "ok" : "ng");
+  stamp.innerHTML = n===0 ? "数量<br>未入力" : ok ? "標準適用<br>範囲内" : "適用外<br>別途見積";
+
+  $("principleBar").innerHTML =
+    '<span style="font-weight:700;">原則</span>' +
+    '<span>編成 '+crewTotal+'名/班(世話役'+RATE.crew.sewa+'・特殊'+RATE.crew.toku+'〈うち切削機オペ1専任〉・普通'+RATE.crew.futsu+')</span>' +
+    '<span>能力 '+RATE.mPerNight+'m=1本/夜</span><span>切削機 1台/班</span>' +
+    '<span style="font-weight:700;">→ '+f2(crewTotal)+' 人日/本(固定)</span>';
+
+  $("warnBox").innerHTML = warns.map(w => '<div class="warn">⚠ '+esc(w)+'</div>').join("");
+
+  /* 統計 */
+  let statsHtml =
+    '<div class="stat'+(n>0 && !ok ? " alert":"")+'"><div class="s-label">所要夜数</div><div><span class="s-val">'+f0(nights)+'</span><span class="s-unit">夜</span></div><div class="s-sub">1本('+RATE.mPerNight+'m)/夜</div></div>' +
+    '<div class="stat"><div class="s-label">総労務(土木)</div><div><span class="s-val">'+f2(civTotal)+'</span><span class="s-unit">人日</span></div><div class="s-sub">'+f2(crewTotal)+'人日/本 × '+n+'本</div></div>' +
+    '<div class="stat"><div class="s-label">機械運転時間</div><div><span class="s-val">'+f2(machTotal)+'</span><span class="s-unit">h</span></div><div class="s-sub">切削機+注入機</div></div>';
+  if (civilCostTotal != null)
+    statsHtml += '<div class="stat"><div class="s-label">土木 概算金額</div><div><span class="s-val" style="font-size:20px;">'+yen(civilCostTotal)+'</span></div><div class="s-sub">労務+機械+諸雑費(税抜)</div></div>';
+  $("statsBox").innerHTML = statsHtml;
+
+  /* 労務表 */
+  const labRows = [
+    ["世話役", 1.0, RATE.crew.sewa, sumS, uS],
+    ["特殊作業員(うち切削機オペ1名専任)", 3.0, RATE.crew.toku, sumT, uT],
+    ["普通作業員", 4.0, RATE.crew.futsu, sumF, uF],
+  ];
+  let lt = '<thead><tr><th>職種</th><th class="r" style="width:90px;">歩掛(人日/本)</th><th class="r" style="width:70px;">編成(名)</th><th class="r" style="width:100px;">所要人日</th>' +
+    (anyLaborPrice ? '<th class="r" style="width:110px;">金額(税抜)</th>' : "") + '</tr></thead><tbody>';
+  labRows.forEach(([nm,rate,crew,md,u], i) => {
+    const b = i%2===1 ? " band":"";
+    lt += '<tr><td class="'+b+'">'+esc(nm)+'</td><td class="r'+b+'">'+f2(rate)+'</td><td class="r'+b+'">'+crew+'</td>' +
+      '<td class="r calc bold">'+f2(md)+'</td>' +
+      (anyLaborPrice ? '<td class="r calc">'+(u>0 ? yen(md*u) : "—")+'</td>' : "") + '</tr>';
+  });
+  lt += '<tr><td class="bold calc">合 計</td><td class="r bold calc">'+f2(crewTotal)+'</td><td class="r bold calc">'+crewTotal+'</td>' +
+    '<td class="r bold calc">'+f2(civTotal)+'</td>' +
+    (anyLaborPrice ? '<td class="r bold calc">'+(civLaborCost != null ? yen(civLaborCost) : "—(単価未入力あり)")+'</td>' : "") + '</tr></tbody>';
+  $("laborTable").innerHTML = lt;
+
+  /* 工程別内訳 */
+  let pt = '<thead><tr><th>工程</th><th class="r" style="width:70px;">世話役</th><th class="r" style="width:70px;">特殊</th><th class="r" style="width:70px;">普通</th><th class="r" style="width:80px;">計(人日)</th><th>摘要</th></tr></thead><tbody>';
+  civRows.forEach((r,i) => {
+    const b = i%2===1 ? " band":"";
+    pt += '<tr><td class="'+b+'">'+esc(r.p)+'</td>' +
+      '<td class="r'+b+'">'+(r.S ? f2(r.S) : "-")+'</td><td class="r'+b+'">'+(r.T ? f2(r.T) : "-")+'</td><td class="r'+b+'">'+(r.F ? f2(r.F) : "-")+'</td>' +
+      '<td class="r calc bold">'+f2(r.S+r.T+r.F)+'</td><td class="note'+b+'">'+esc(r.note)+'</td></tr>';
+  });
+  $("procTable").innerHTML = pt + "</tbody>";
+
+  /* 機械表 */
+  let mt = '<thead><tr><th>機械名称</th><th class="r" style="width:54px;">台/班</th><th class="r" style="width:82px;">運転時間</th>' +
+    (machCostShown != null ? '<th class="r" style="width:96px;">機械経費</th>' : "") + '</tr></thead><tbody>';
+  machRows.forEach((m,i) => {
+    const b = i%2===1 ? " band":"";
+    mt += '<tr><td class="'+b+'">'+esc(m.m)+'<div class="cell-sub">'+esc(m.note)+'</div></td>' +
+      '<td class="r'+b+'">'+m.units+'</td><td class="r calc bold">'+(m.H==null ? "別途" : f2(m.H)+" h")+'</td>';
+    if (machCostShown != null)
+      mt += '<td class="r calc">'+(i===0 && uCut>0 ? yen(m.H*uCut) : i===1 && uInj>0 ? yen(m.H*uInj) : "-")+'</td>';
+    mt += '</tr>';
+  });
+  mt += '<tr><td class="bold calc">合 計</td><td class="r calc">-</td><td class="r bold calc">'+f2(machTotal)+' h</td>' +
+    (machCostShown != null ? '<td class="r bold calc">'+yen(machCost)+'</td>' : "") + '</tr></tbody>';
+  $("machTable").innerHTML = mt;
+
+  /* 材料表 */
+  $("matTable").innerHTML =
+    '<thead><tr><th>材料名</th><th class="r" style="width:120px;">所要量</th><th style="width:92px;">摘要</th></tr></thead><tbody>' +
+    '<tr><td>TAIYOSHEET_RH本体<div class="cell-sub">9×48mm・50m/本</div></td><td class="r calc bold">'+f0(n)+' 本</td><td class="note">定尺供給・切断ロスなし</td></tr>' +
+    '<tr><td class="band">充填材<div class="cell-sub">ポリブタジエン系</div></td><td class="r calc bold">'+(fillQty != null ? f1(fillQty) : "設計による")+'</td>' +
+    '<td class="note band">'+(fillQty != null ? "延長 "+f0(ext)+"m・ロス"+f1(loss)+"%込" : "対象延長 "+f0(ext)+"m")+'</td></tr>' +
+    '<tr><td>固定金具・養生材等</td><td class="r calc">諸雑費</td><td class="note">労務費の'+(zat>0 ? f1(zat)+"%" : "○%")+'として計上</td></tr></tbody>';
+  if (zatsuCost != null || civilCostTotal != null) {
+    $("matFoot").style.display = "block";
+    $("matFoot").innerHTML =
+      (zatsuCost != null ? '<span style="margin-right:12px;">諸雑費 <b>'+yen(zatsuCost)+'</b></span>' : "") +
+      (civilCostTotal != null ? '<span>土木 直接費計 <b class="total">'+yen(civilCostTotal)+'</b><span class="taxnote">(税抜)</span></span>' : "");
+  } else { $("matFoot").style.display = "none"; }
+
+  /* 電気表 */
+  $("elecCard").style.display = st.showElec ? "block" : "none";
+  if (st.showElec) {
+    $("elecTable").innerHTML =
+      '<thead><tr><th>工程</th><th class="r" style="width:92px;">数量</th><th class="r" style="width:70px;">世話役</th><th class="r" style="width:70px;">電工</th><th class="r" style="width:70px;">普通</th><th class="r" style="width:86px;">計(人日)</th></tr></thead><tbody>' +
+      '<tr><td>結線・端末処理・絶縁測定</td><td class="r">'+f0(kessen)+' 箇所</td><td class="r calc">'+f2(eKessen.s)+'</td><td class="r calc">'+f2(eKessen.d)+'</td><td class="r">-</td><td class="r calc bold">'+f2(eKessen.s+eKessen.d)+'</td></tr>' +
+      '<tr><td class="band">制御盤・キュービクル据付</td><td class="r band">'+f0(ban)+' 台</td><td class="r calc">'+f2(eBan.s)+'</td><td class="r calc">'+f2(eBan.d)+'</td><td class="r calc">'+f2(eBan.f)+'</td><td class="r calc bold">'+f2(eBan.s+eBan.d+eBan.f)+'</td></tr>' +
+      '<tr><td>試運転・温度確認・検査立会</td><td class="r">'+shiunQty+' 式</td><td class="r calc">'+f2(eShiun.s)+'</td><td class="r calc">'+f2(eShiun.d)+'</td><td class="r">-</td><td class="r calc bold">'+f2(eShiun.s+eShiun.d)+'</td></tr>' +
+      '<tr><td class="bold calc">電気 労務計</td><td class="r calc">-</td><td class="r bold calc">'+f2(eS)+'</td><td class="r bold calc">'+f2(eD)+'</td><td class="r bold calc">'+f2(eF)+'</td><td class="r bold calc">'+f2(eS+eD+eF)+'</td></tr></tbody>';
+    $("elecFoot").innerHTML =
+      '<span>ラフテレーンクレーン25t吊:<b>'+f2(craneH)+' h</b>(盤据付 4.00h/台)' +
+      (craneCost != null ? ' 経費 <b>'+yen(craneCost)+'</b>' : "") +
+      '<span style="color:var(--sub);"> 電気材料(ケーブル・盤等)は設計による</span></span>' +
+      (elecCost != null ? '<span>電気 労務費(参考・税抜) <b style="color:var(--navy);">'+yen(elecCost)+'</b></span>' : "");
+  }
+
+  calcCache = { st, n, ext, nights, kessen, ban, sumS, sumT, sumF, civTotal, civRows, machRows, machTotal,
+    fillQty, eKessen, eBan, eShiun, eS, eD, eF, shiunQty, craneH,
+    uS, uT, uF, uCut, uInj, uCr, zat, civLaborCost, machCost, machCostShown, zatsuCost, civilCostTotal, elecCost, craneCost };
+}
+
+/* ================= CSV出力(Excel向けBOM付) ================= */
+function dlCSV() {
+  const c = calcCache; if (!c) return;
+  const R = [];
+  R.push(["TAIYOSHEET_RH 設置工 歩掛計算("+VER+")", "", "算出日", today]);
+  R.push(["※歩掛は記入例(仮値)。金額は税抜・円未満四捨五入。電気工事・交通誘導警備員・間接費は別途。"]);
+  R.push([]);
+  R.push(["区分","項目","数量","単位","単価(円)","金額(円)","備考"]);
+  R.push(["数量","施工本数",c.n,"本","","","延長 "+c.ext+" m(50m/本)"]);
+  R.push(["数量","所要夜数",c.nights,"夜","","","1本(50m)/夜"]);
+  R.push(["数量","結線箇所",c.kessen,"箇所","","",c.st.kessenAuto ? "標準2箇所/本 自動" : "手入力"]);
+  R.push(["数量","制御盤・キュービクル",c.ban,"台","","",""]);
+  [["世話役",c.sumS,c.uS],["特殊作業員(うち切削機オペ1名専任)",c.sumT,c.uT],["普通作業員",c.sumF,c.uF]]
+    .forEach(([nm,md,u]) => R.push(["土木労務",nm,md.toFixed(2),"人日",u>0?u:"",u>0?Math.round(md*u):"",""]));
+  R.push(["土木労務","合計",c.civTotal.toFixed(2),"人日","",c.civLaborCost!=null?Math.round(c.civLaborCost):"","8.00人日/本×"+c.n+"本"]);
+  c.civRows.forEach(r => R.push(["(工程別)",r.p,(r.S+r.T+r.F).toFixed(2),"人日","","",r.note||""]));
+  c.machRows.forEach((m,i) => R.push(["機械",m.m+"("+m.units+"台/班)",m.H==null?"別途":m.H.toFixed(2),"h",
+    i===0&&c.uCut>0?c.uCut:i===1&&c.uInj>0?c.uInj:"",
+    i===0&&c.uCut>0?Math.round(m.H*c.uCut):i===1&&c.uInj>0?Math.round(m.H*c.uInj):"",m.note]));
+  R.push(["機械","合計",c.machTotal.toFixed(2),"h","",c.machCostShown!=null?Math.round(c.machCost):"",""]);
+  R.push(["材料","TAIYOSHEET_RH本体",c.n,"本","","","定尺・切断ロスなし"]);
+  R.push(["材料","充填材",c.fillQty!=null?c.fillQty.toFixed(1):"設計による","","","","対象延長 "+c.ext+" m"]);
+  if (c.zatsuCost!=null) R.push(["諸雑費","労務費×"+c.zat+"%","","","",Math.round(c.zatsuCost),""]);
+  if (c.civilCostTotal!=null) R.push(["土木計","直接費(労務+機械+諸雑費)","","","",Math.round(c.civilCostTotal),"税抜"]);
+  R.push([]);
+  R.push(["電気(別途)","結線・端末処理・絶縁測定",c.kessen+"箇所","","","","世話役"+c.eKessen.s.toFixed(2)+"・電工"+c.eKessen.d.toFixed(2)+"人日"]);
+  R.push(["電気(別途)","制御盤・キュービクル据付",c.ban+"台","","","","世話役"+c.eBan.s.toFixed(2)+"・電工"+c.eBan.d.toFixed(2)+"・普通"+c.eBan.f.toFixed(2)+"人日"]);
+  R.push(["電気(別途)","試運転・温度確認・検査立会",c.shiunQty+"式","","","","世話役"+c.eShiun.s.toFixed(2)+"・電工"+c.eShiun.d.toFixed(2)+"人日"]);
+  R.push(["電気(別途)","労務計",(c.eS+c.eD+c.eF).toFixed(2),"人日","",c.elecCost!=null?Math.round(c.elecCost):"",""]);
+  R.push(["電気(別途)","クレーン25t吊",c.craneH.toFixed(2),"h",c.uCr>0?c.uCr:"",c.craneCost!=null?Math.round(c.craneCost):"","盤据付 4.00h/台"]);
+  const csv = R.map(row => row.map(x => {
+    const s = String(x ?? "");
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  }).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF"+csv], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "TAIYOSHEET_RH_歩掛算出_"+c.n+"本.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  setMsg("CSVを書き出しました(iPadでは「ファイル」Appのダウンロードに保存されます)");
+}
+
+/* ================= 保存・復元(localStorage) ================= */
+function setMsg(t){ $("msg").textContent = t; }
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(getState()));
+    setMsg("保存しました " + new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}));
+  } catch(e){ setMsg("保存できませんでした(プライベートブラウズ中は保存不可の場合があります)"); }
+}
+function reset() {
+  applyState(DEFAULTS);
+  try { localStorage.removeItem(KEY); } catch(e){}
+  setMsg("初期値に戻しました");
+  recalc();
+}
+function restore() {
+  try {
+    const r = localStorage.getItem(KEY);
+    if (r) { applyState({ ...DEFAULTS, ...JSON.parse(r) }); setMsg("前回の入力を復元しました"); }
+  } catch(e){}
+}
+
+/* ================= イベント ================= */
+document.querySelectorAll("input").forEach(el => {
+  el.addEventListener("input", recalc);
+  el.addEventListener("change", recalc);
+});
+$("modeBars").addEventListener("change", () => {
+  if (calcCache) $("bars").value = String(calcCache.n);
+  recalc();
+});
+$("modeLen").addEventListener("change", () => {
+  if (calcCache) $("extIn").value = String(calcCache.n * RATE.mPerNight);
+  recalc();
+});
+$("kessenAuto").addEventListener("change", () => {
+  if (!$("kessenAuto").checked && calcCache)
+    $("kessenMan").value = String(calcCache.n * RATE.elec.kessenPerBar);
+  recalc();
+});
+$("priceToggle").addEventListener("click", () => {
+  const open = $("priceBody").style.display === "none";
+  $("priceBody").style.display = open ? "grid" : "none";
+  $("priceArrow").textContent = open ? "▲" : "▼";
+});
+$("procBtn").addEventListener("click", () => {
+  showProc = !showProc;
+  $("procWrap").style.display = showProc ? "block" : "none";
+  $("procBtn").textContent = showProc ? "▲ 工程別内訳を閉じる" : "▼ 工程別内訳(7工程)を表示";
+});
+$("csvBtn").addEventListener("click", dlCSV);
+$("printBtn").addEventListener("click", () => window.print());
+$("saveBtn").addEventListener("click", save);
+$("resetBtn").addEventListener("click", reset);
+
+/* ================= 起動 ================= */
+restore();
+recalc();
+</script>
+</body>
+</html>
